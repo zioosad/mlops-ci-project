@@ -5,3 +5,4 @@ __pycache__/
 .dvc/cache
 models/
 data/
+venv/
