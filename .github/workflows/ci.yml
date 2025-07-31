@@ -1,0 +1,59 @@
+name: MLOps CI Pipeline
+
+# Trigger the workflow on push or pull request to the main branch
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # This job runs all our CI checks
+  build-and-test:
+    runs-on: ubuntu-latest # Use a standard Linux runner
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      # Step 3: Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run Code Quality Checks (Linter and Formatter)
+      - name: Lint and Format Check with flake8 and black
+        run: |
+          flake8 src/ tests/
+          black --check src/ tests/
+
+      # Step 5: Run Unit Tests with pytest
+      - name: Run Unit Tests
+        run: pytest
+
+      # --- MLOps Specific Steps ---
+
+      # Step 6: Pull data from DVC remote storage
+      - name: Pull DVC data
+        env:
+          # Use the secret we created
+          GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+        run: dvc pull
+
+      # Step 7: Train the model
+      # This script should generate `models/model.pkl`, `models/X_test.csv`, etc.
+      - name: Train model
+        run: python src/train.py
+
+      # Step 8: Validate the model performance
+      # This script will exit with a non-zero code if validation fails
+      - name: Validate model
+        run: python src/validate.py
